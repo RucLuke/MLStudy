@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import itertools
 
 # sklearn 机器学习库
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, KFold, cross_val_score
+from sklearn.model_selection import train_test_split, KFold
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, recall_score, classification_report
+from sklearn.metrics import confusion_matrix, recall_score
+from imblearn.over_sampling import SMOTE
 
 
 def preview_data(data):
@@ -41,23 +43,63 @@ def process_data(data):
     x_under_sample = under_sample_data.loc[:, under_sample_data.columns != 'Class']
     y_under_sample = under_sample_data.loc[:, under_sample_data.columns == 'Class']
 
+    print("---------original sample---------")
     # cross_validation(x, y)
-    print("---------x_under_sample---------")
+    print("---------under sample---------")
     cross_validation(x_under_sample, y_under_sample)
 
     return data
 
 
 def cross_validation(x, y):
-    # 交叉验证
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
-    # print("total:", len(x_train + x_test))
-    # print("X_train", len(x_train))
-    # print("x_test", len(x_test))
-    # print("y_train", len(y_train))
-    # print("y_test", len(y_test))
-    # print("percentage:", len(x_train) / len(x_train + x_test))
-    print_k_fold_scores(x_train, y_train)
+    predict_prob(x_train, x_test, y_train, y_test)
+
+
+def predict_prob(x_train, x_test, y_train, y_test):
+    # best_c = print_k_fold_scores(x_train, y_train)
+    best_c = 0.01
+    lr = LogisticRegression(C=best_c, penalty="l1", solver="liblinear")
+    lr.fit(x_train, y_train.values.ravel())
+    y_predict_prob = lr.predict_proba(x_test.values)
+    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    plt.figure(figsize=(10, 10))
+    j = 1
+    for i in thresholds:
+        y_test_predictions_high_recall = y_predict_prob[:, 1] > i
+
+        plt.subplot(3, 3, j)
+        j += 1
+
+        # Compute confusion matrix
+        cnf_matrix = confusion_matrix(y_test, y_test_predictions_high_recall)
+        np.set_printoptions(precision=2)
+        print("Recall metric in the testing dataset: ", cnf_matrix[1, 1] / (cnf_matrix[1, 0] + cnf_matrix[1, 1]))
+        class_names = [0, 1]
+        plot_confusion_matrix(cnf_matrix,
+                              classes=class_names,
+                              title='Confusion matrix > %s' % i)
+    plt.show()
+
+
+def plot_confusion_matrix(cm, classes,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=0)
+    plt.yticks(tick_marks, classes)
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
 
 
 def print_k_fold_scores(x_train_data, y_train_data):
@@ -96,8 +138,36 @@ def print_k_fold_scores(x_train_data, y_train_data):
     return best_c
 
 
+def smote_sample(data):
+    columns = data.columns
+    features_columns = columns.delete(len(columns) - 1)
+    features = data[features_columns]
+    labels = data["Class"]
+    features_train, features_test, labels_train, labels_test = train_test_split(features,
+                                                                                labels,
+                                                                                test_size=0.2,
+                                                                                random_state=0)
+    over_sampler = SMOTE(random_state=0)
+    os_features, os_labels = over_sampler.fit_sample(features_train, labels_train)
+    print(len(os_labels[os_labels == 1]))
+    os_features = pd.DataFrame(os_features)
+    os_labels = pd.DataFrame(os_labels)
+    # best_c = print_k_fold_scores(os_features, os_labels)
+    best_c = 100
+    lr = LogisticRegression(C=best_c, penalty="l1",solver="liblinear")
+    lr.fit(os_features, os_labels.values.ravel())
+    y_predict = lr.predict(features_test.values)
+    con_matrix = confusion_matrix(labels_test, y_predict)
+    np.set_printoptions(precision=2)
+    classes = [0, 1]
+    plt.figure()
+    plot_confusion_matrix(con_matrix, classes)
+    plt.show()
+
+
 if __name__ == '__main__':
     credit_card_data = pd.read_csv("data/creditcard.csv")
     # preview_data(credit_card_data)
-    standardized_data = process_data(credit_card_data)
+    # standardized_data = process_data(credit_card_data)
+    smote_sample(credit_card_data)
     # print(standardized_data.head())
