@@ -76,5 +76,5 @@ if __name__ == '__main__':
     """
     n_words = train(words(open("big.txt").read()))
     alphabet = "abcdefghijklmnopqrstuvwxyz"
-    correction = correct("zhang")
+    correction = correct("learn")
     print(correction)
