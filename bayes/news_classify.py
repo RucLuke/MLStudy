@@ -5,12 +5,13 @@ import numpy as np
 import pandas as pd
 import jieba.analyse
 import matplotlib.pyplot as plt
+
+from gensim import corpora
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from wordcloud import WordCloud
-from gensim import corpora
 
 
 def cut_words():
