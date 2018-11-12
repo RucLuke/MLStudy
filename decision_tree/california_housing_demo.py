@@ -15,7 +15,6 @@ def grid_search():
     stds = grid.cv_results_['std_test_score']
     for mean, std, params in zip(means, stds, grid.cv_results_['params']):
         print("%0.3f (+/-%0.03f) for %r" % (mean, std * 2, params))
-
     print(grid.best_params_, grid.best_score_)
 
 
