@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import seaborn as sns
+import seaborn_demo as sns
 import numpy as np
 
 # uniform_data = np.random.rand(3, 3)
